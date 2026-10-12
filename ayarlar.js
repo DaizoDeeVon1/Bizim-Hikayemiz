@@ -85,4 +85,10 @@ const SITE_COLORS = { pink: null, wine: null };
     appId: '...',
   };
 */
-const FIREBASE_CONFIG = null;
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAJfXKmJV4Xnz9lsrS8YLlFzdLomEzTy20",
+    authDomain: "bizim-hikayemiz-a9202.firebaseapp.com",
+    projectId: "bizim-hikayemiz-a9202",
+    appId: "1:548892750476:web:6cc366d0ff6b5b73f981a9",
+};
+   
