@@ -1188,6 +1188,11 @@ async function connectFirebase() {
    ========================================================= */
 
 async function init() {
+  // Özel hikâye linkleri (?h=...) Google'da çıkmasın; sadece ana sayfa çıksın
+  if (new URLSearchParams(location.search).has('h')) {
+    document.head.insertAdjacentHTML('beforeend', '<meta name="robots" content="noindex, nofollow">');
+  }
+
   // PHOTOS listesindeki dosyaları fotoğraf nesnelerine çevir
   state.configPhotos = PHOTOS.map((item, i) => ({
     id: 'c' + i,
