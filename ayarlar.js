@@ -60,7 +60,7 @@ const LETTERS = [
                (sadece şarkı dosyası varsa).
   Not: Telif hakkı olan şarkıyı herkese açık bir sitede yayınlamak sorun çıkarabilir.
 */
-const MUSIC = { file: null, volume: 0.5, playOnEnter: true };
+const MUSIC = { file: 'sarkı1.mp3', volume: 0.5, playOnEnter: true };
 
 /*
   SİTE YAZILARI VE RENKLER
