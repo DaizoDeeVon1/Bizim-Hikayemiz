@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bizim Hikâyemiz</title>
+  <meta name="robots" content="noindex, nofollow">  <!-- arama motorlarında çıkmasın -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❤️</text></svg>">
+
+  <!-- El yazısı ve serif yazı tipleri -->
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Cormorant+Garamond:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Sağ üst: hikâye oluştur / giriş (sadece canlı sürümde görünür) -->
+  <div id="account-bar" hidden></div>
+
+  <!-- Arka planda yükselen kalpler (JS ekler) -->
+  <div id="hearts"></div>
+
+  <!-- ============ 1) KARŞILAMA EKRANI ============ -->
+  <div id="intro">
+    <h1 data-edit="intro-title">Seninle her şey daha güzel…</h1>
+    <div id="counter"></div>
+    <button class="btn" id="enter-btn" data-edit="enter-btn">Hikâyemize Gir</button>
+  </div>
+
+  <!-- Üst menü -->
+  <nav>
+    <a href="#albums">Albümler</a>
+    <a href="#gallery">Galeri</a>
+    <a href="#story">Hikâyemiz</a>
+    <a href="#letters">Mektuplar</a>
+    <a href="#finale">Final</a>
+  </nav>
+
+  <!-- Müzik aç/kapat -->
+  <button class="btn" id="music-btn">♪ Müzik</button>
+
+  <!-- ============ 2) ALBÜMLER ============ -->
+  <section id="albums">
+    <h2 class="reveal" data-edit="title-albums">Albümlerimiz</h2>
+    <div class="album-list" id="album-list"></div>
+  </section>
+
+  <!-- ============ 3) GALERİ ============ -->
+  <section id="gallery">
+    <h2 class="reveal" id="gallery-title">Tüm Anılar</h2>
+
+    <div class="tools reveal">
+      <label class="btn">
+        📷 Fotoğraflarını ekle
+        <input id="upload-input" type="file" accept="image/*" multiple hidden>
+      </label>
+      <span class="hint" id="hint">Eklediğin fotoğraflar bu tarayıcıda kalıcı olarak saklanır.</span>
+    </div>
+
+    <div id="grid"></div>
+  </section>
+
+  <!-- ============ 4) HİKÂYEMİZ ============ -->
+  <section id="story">
+    <h2 class="reveal" data-edit="title-story">Hakkımızda</h2>
+
+    <div class="story-layout reveal">
+      <div class="big-polaroid">
+        <div class="photo" id="story-photo"></div>
+        <div class="caption" style="text-align:center" data-edit="story-caption">ilk fotoğrafımız ♡</div>
+        <button class="mini-btn edit-only" data-image="story">🖼 Fotoğrafı değiştir</button>
+      </div>
+
+      <div>
+        <p data-edit="story-intro">Burada tanışma hikâyenizi anlatın. Bir bakışla, bir mesajla ya da tesadüfen başlayan o ilk günü…</p>
+        <div class="timeline">
+          <p><b data-edit="tl1-title">İlk konuşma</b><br><span data-edit="tl1-text">Tarih ve kısacık bir not buraya.</span></p>
+          <p><b data-edit="tl2-title">İlk buluşma</b><br><span data-edit="tl2-text">O gün neler hissettiğinizi yazın.</span></p>
+          <p><b data-edit="tl3-title">Önemli bir tarih</b><br><span data-edit="tl3-text">Birlikte yaşadığınız bir dönüm noktası.</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="quote reveal" data-edit="story-quote">“Bazı hikâyeler anlatılmaz. Birlikte yaşanır.”</div>
+  </section>
+
+  <!-- ============ 5) MEKTUPLAR ============ -->
+  <section id="letters">
+    <h2 class="reveal" data-edit="title-letters">Mektuplarımız</h2>
+    <div id="letter-list"></div>
+  </section>
+
+  <!-- ============ 6) FİNAL ============ -->
+  <section id="finale">
+    <div class="finale-text reveal" data-edit="finale-text">Bu hikâyenin en sevdiğim yanı, henüz bitmemiş olması.</div>
+    <div id="finale-date"></div>
+    <div class="forever" data-edit="forever">Sonsuza kadar biz. ♡</div>
+  </section>
+
+  <!-- ============ DÜZENLEME MODU ============ -->
+  <button class="btn" id="edit-toggle">✎ Düzenle</button>
+
+  <div id="settings-panel" hidden>
+    <strong>Site ayarları</strong>
+    <small>Sayfadaki yazıların üstüne tıklayıp doğrudan değiştirebilirsin. Albüm kapakları ve hikâye fotoğrafı için 🖼 butonlarını kullan.</small>
+    <label>Karşılama yazısı <input type="text" data-text-key="intro-title"></label>
+    <label>Giriş butonu yazısı <input type="text" data-text-key="enter-btn"></label>
+    <label>Birlikte olduğunuz tarih <input type="date" id="set-date"></label>
+    <label>Vurgu rengi <input type="color" id="set-pink" value="#f26b8a"></label>
+    <label>Bordo rengi <input type="color" id="set-wine" value="#8e263f"></label>
+    <!-- Sadece hikâyenin sahibine görünür -->
+    <div class="owner-only">
+      <label>Paylaşım linki (bunu sevdiklerine gönder)
+        <input type="text" id="share-link" readonly>
+      </label>
+      <button class="btn small" id="copy-link">Linki kopyala</button>
+      <button class="btn small" id="delete-story">Hikâyemi sil</button>
+    </div>
+    <button class="btn small" id="export-btn">⬇ ayarlar.js olarak indir</button>
+    <button class="btn small" id="reset-all">Yazı ve ayarları sıfırla</button>
+  </div>
+
+  <!-- Kapak / hikâye fotoğrafı seçmek için gizli dosya kutusu -->
+  <input id="image-input" type="file" accept="image/*" hidden>
+
+  <!-- ============ LIGHTBOX (fotoğraf büyütme) ============ -->
+  <div id="lightbox">
+    <button id="lb-close">×</button>
+    <button class="arrow" id="lb-prev">‹</button>
+    <button class="arrow" id="lb-next">›</button>
+
+    <div class="photo" id="lb-photo"></div>
+    <div id="lb-caption"></div>
+
+    <!-- Alt yazı / tarih düzenleme kutusu (sadece kendi eklediğin fotoğraflar) -->
+    <div id="lb-edit-box" hidden>
+      <input id="edit-note" type="text" placeholder="Alt yazı">
+      <input id="edit-date" type="text" placeholder="Tarih (örn. 14 Şubat 2024)">
+      <button class="btn small" id="edit-save">Kaydet</button>
+    </div>
+
+    <div class="lb-actions">
+      <button class="fav-btn" id="lb-fav">♡</button>
+      <button class="btn small" id="lb-edit-btn" hidden>Düzenle</button>
+      <button class="btn small" id="lb-delete" hidden>Sil</button>
+    </div>
+  </div>
+
+  <!-- Firebase (sadece ayarlar.js'e FIREBASE_CONFIG yazılırsa kullanılır) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="ayarlar.js"></script>   <!-- önce ayarlar, sonra ana kod -->
+  <script src="script.js"></script>
+</body>
+</html>
