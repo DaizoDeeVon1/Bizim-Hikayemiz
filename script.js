@@ -784,7 +784,7 @@ function fillSettingsPanel() {
   $('#set-pink').value = settings.pink || '#f26b8a';
   $('#set-wine').value = settings.wine || '#8e263f';
   $('#set-volume').value = music.volume();
-  $$('.local-only').forEach((element) => { element.hidden = shared.active; });   // ortak modda şarkı yükleme kapalı
+  $$('.local-only').forEach((element) => { element.hidden = shared.active && !shared.firebase; });   // ortak modda şarkı yükleme kapalı
 
   $$('[data-text-key]').forEach((input) => {
     input.value = $(`[data-edit="${input.dataset.textKey}"]`).textContent;
@@ -845,16 +845,36 @@ function setupEditMode() {
     const file = event.target.files[0];
     event.target.value = '';
     if (!file) return;
-    if (file.size > 25 * 1024 * 1024) {
-      $('#music-pick').textContent = 'Dosya çok büyük (en fazla 25 MB)';
+    const limit = shared.firebase ? MUSIC_MAX_BYTES : 25 * 1024 * 1024;
+    if (file.size > limit) {
+      $('#music-pick').textContent = `Dosya çok büyük (en fazla ${limit / 1024 / 1024} MB)`;
       return;
     }
+
+    // Canlı sürüm: şarkı hikâyeye kaydedilir, ziyaretçiler de dinler
+    if (shared.firebase) {
+      $('#music-pick').textContent = 'Yükleniyor…';
+      try {
+        await saveMusicChunks(file);
+        $('#music-pick').textContent = '🎵 Şarkı eklendi ✓';
+      } catch (error) {
+        console.warn('Şarkı yüklenemedi:', error);
+        $('#music-pick').textContent = 'Yüklenemedi, tekrar dene';
+      }
+      return;
+    }
+
     try { await imageSave({ id: 'music', blob: file }); } catch (error) { /* önemli değil */ }
     state.images.music = URL.createObjectURL(file);
     music.restart();
     $('#music-pick').textContent = '🎵 Şarkı eklendi ✓';
   });
   $('#music-clear').addEventListener('click', async () => {
+    if (shared.firebase) {
+      try { await clearMusicChunks(); } catch (error) { /* önemli değil */ }
+      $('#music-pick').textContent = '🎵 Kendi şarkını seç';
+      return;
+    }
     try { await runStoreRequest(IMAGE_STORE, 'readwrite', (s) => s.delete('music')); } catch (error) { /* önemli değil */ }
     delete state.images.music;
     music.restart();
@@ -1227,6 +1247,48 @@ function setupOwnerTools(storyRef) {
   });
 }
 
+// ---- Müzik (canlı sürüm) ----
+// Şarkı, veritabanının tek kayıt sınırına (1 MB) sığması için parçalara bölünerek saklanır:
+//   stories/<kod>/music/c000, c001, ...   (her parça ~700 KB metin)
+const MUSIC_CHUNK = 700000;
+const MUSIC_MAX_BYTES = 4 * 1024 * 1024;   // en fazla ~4 MB (yaklaşık 3-4 dakikalık mp3)
+
+async function clearMusicChunks() {
+  const snapshot = await shared.db.collection('music').get();
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()));
+}
+
+async function saveMusicChunks(file) {
+  const dataUrl = await blobToDataUrl(file);
+  const total = Math.ceil(dataUrl.length / MUSIC_CHUNK);
+
+  await clearMusicChunks();
+  for (let i = 0; i < total; i++) {
+    await shared.db.collection('music').doc('c' + String(i).padStart(3, '0')).set({
+      d: dataUrl.slice(i * MUSIC_CHUNK, (i + 1) * MUSIC_CHUNK),
+      n: total,
+    });
+  }
+}
+
+// Şarkı değiştiyse çalara bildir
+function setMusicSource(value) {
+  if ((state.images.music || null) === (value || null)) return;
+  if (value) state.images.music = value; else delete state.images.music;
+  music.restart();
+}
+
+// Parçalar gelince birleştir (hepsi gelmeden çalma)
+function applyMusicChunks(snapshot) {
+  const chunks = snapshot.docs
+    .map((doc) => ({ id: doc.id, ...doc.data() }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  if (!chunks.length) { setMusicSource(null); return; }
+  if (chunks.length !== chunks[0].n) return;            // henüz tamamı yazılmadı
+  setMusicSource(chunks.map((chunk) => chunk.d).join(''));
+}
+
 async function connectFirebase() {
   if (!FIREBASE_CONFIG || typeof firebase === 'undefined') return;   // ayarlanmamış: tek kişilik mod
 
@@ -1262,6 +1324,7 @@ async function connectFirebase() {
   shared.active = true;
   shared.noMigrate = true;
   shared.limit = MAX_PHOTOS;
+  shared.firebase = true;
 
   CONFIG.minFrames = 0;                      // gerçek hikâyede boş çerçeve gösterme
   SHRINK.size = 1100;                        // veritabanına sığması için daha küçük
@@ -1276,6 +1339,7 @@ async function connectFirebase() {
 
   renderGallery();
   subscribeShared();
+  storyRef.collection('music').onSnapshot(applyMusicChunks, () => {});   // şarkıyı herkes dinler
 }
 
 
