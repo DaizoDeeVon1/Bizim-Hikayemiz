@@ -114,6 +114,7 @@ function setupIntro() {
 
   $('#enter-btn').addEventListener('click', () => {
     $('#intro').classList.add('gone');
+    if (MUSIC.playOnEnter && music.source() && !music.playing) music.start();   // şarkı varsa kendiliğinden başlasın
     for (let i = 0; i < 25; i++) setTimeout(spawnHeart, i * 80);   // kalp yağmuru
   });
 }
@@ -543,34 +544,99 @@ function setupScrollEffects() {
 
 
 /* =========================================================
-   9) MÜZİK (harici dosya gerekmez, yumuşak bir ses üretir)
-   Kendi şarkını eklemek istersen: <audio src="muzik.mp3" loop> kullan.
+   9) MÜZİK (kendi şarkın ya da hazır yumuşak fon sesi)
+   Şarkı, ayarlar.js içindeki MUSIC bölümünden ya da ✎ Düzenle panelinden seçilir.
    ========================================================= */
 
-function setupMusic() {
-  let audio = null;
-  let playing = false;
+const music = {
+  audio: null,          // kendi şarkın (varsa)
+  audioSource: null,
+  context: null,        // şarkı yoksa: hazır fon sesi
+  gain: null,
+  playing: false,
 
-  $('#music-btn').addEventListener('click', () => {
-    if (!audio) {
-      audio = new (window.AudioContext || window.webkitAudioContext)();
-      const volume = audio.createGain();
-      volume.gain.value = 0.04;
-      volume.connect(audio.destination);
+  // Önce ✎ Düzenle'den seçilen şarkı, yoksa ayarlar.js'teki dosya
+  source() { return state.images.music || MUSIC.file; },
+
+  volume() {
+    return typeof settings.musicVolume === 'number' ? settings.musicVolume : MUSIC.volume;
+  },
+
+  start() {
+    this.playing = true;
+    const source = this.source();
+
+    if (source) {
+      this.stopSynth();
+      if (!this.audio || this.audioSource !== source) {
+        if (this.audio) this.audio.pause();
+        this.audio = new Audio(source);
+        this.audio.loop = true;
+        this.audioSource = source;
+      }
+      this.audio.volume = this.volume();
+      this.audio.play().catch(() => this.fail());
+    } else {
+      this.startSynth();
+    }
+    this.updateButton();
+  },
+
+  stop() {
+    this.playing = false;
+    if (this.audio) this.audio.pause();
+    this.stopSynth();
+    this.updateButton();
+  },
+
+  toggle()  { this.playing ? this.stop() : this.start(); },
+
+  // Şarkı değişince: çalıyorsa yeni şarkıyla devam et
+  restart() {
+    const wasPlaying = this.playing;
+    this.stop();
+    if (wasPlaying) this.start();
+  },
+
+  setVolume(value) {
+    if (this.audio) this.audio.volume = value;
+    if (this.gain) this.gain.gain.value = 0.08 * value;
+  },
+
+  // Şarkı yokken çalan yumuşak ses (harici dosya gerekmez)
+  startSynth() {
+    if (!this.context) {
+      this.context = new (window.AudioContext || window.webkitAudioContext)();
+      this.gain = this.context.createGain();
+      this.gain.connect(this.context.destination);
 
       [220, 277.2, 329.6, 440].forEach((frequency) => {
-        const oscillator = audio.createOscillator();
+        const oscillator = this.context.createOscillator();
         oscillator.type = 'sine';
         oscillator.frequency.value = frequency;
-        oscillator.connect(volume);
+        oscillator.connect(this.gain);
         oscillator.start();
       });
     }
+    this.gain.gain.value = 0.08 * this.volume();
+    this.context.resume();
+  },
+  stopSynth() {
+    if (this.context) this.context.suspend();
+  },
 
-    playing = !playing;
-    playing ? audio.resume() : audio.suspend();
-    $('#music-btn').textContent = playing ? '♪ Durdur' : '♪ Müzik';
-  });
+  fail() {
+    this.playing = false;
+    $('#music-btn').textContent = '♪ Şarkı açılamadı';
+  },
+
+  updateButton() {
+    $('#music-btn').textContent = this.playing ? '♪ Durdur' : '♪ Müzik';
+  },
+};
+
+function setupMusic() {
+  $('#music-btn').addEventListener('click', () => music.toggle());
 }
 
 
@@ -717,6 +783,8 @@ function fillSettingsPanel() {
   $('#set-date').value = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
   $('#set-pink').value = settings.pink || '#f26b8a';
   $('#set-wine').value = settings.wine || '#8e263f';
+  $('#set-volume').value = music.volume();
+  $$('.local-only').forEach((element) => { element.hidden = shared.active; });   // ortak modda şarkı yükleme kapalı
 
   $$('[data-text-key]').forEach((input) => {
     input.value = $(`[data-edit="${input.dataset.textKey}"]`).textContent;
@@ -744,6 +812,8 @@ function buildSettingsFile() {
     '',
     `const LETTERS = ${JSON.stringify(getLetters(), null, 2)};`,
     '',
+    `const MUSIC = ${JSON.stringify({ file: MUSIC.file, volume: music.volume(), playOnEnter: MUSIC.playOnEnter }, null, 2)};`,
+    '',
     `const SITE_TEXTS = ${JSON.stringify(settings.texts, null, 2)};`,
     '',
     `const SITE_COLORS = ${JSON.stringify({ pink: settings.pink || null, wine: settings.wine || null })};`,
@@ -763,6 +833,32 @@ function setupEditMode() {
   $('#edit-toggle').addEventListener('click', () => setEditMode(!state.editMode));
   $('#image-input').addEventListener('change', handleImageChange);
   $('#export-btn').addEventListener('click', downloadSettingsFile);
+
+  // Müzik: ses seviyesi ve kendi şarkın
+  $('#set-volume').addEventListener('input', (event) => {
+    settings.musicVolume = Number(event.target.value);
+    saveSettings();
+    music.setVolume(settings.musicVolume);
+  });
+  $('#music-pick').addEventListener('click', () => $('#music-input').click());
+  $('#music-input').addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    if (file.size > 25 * 1024 * 1024) {
+      $('#music-pick').textContent = 'Dosya çok büyük (en fazla 25 MB)';
+      return;
+    }
+    try { await imageSave({ id: 'music', blob: file }); } catch (error) { /* önemli değil */ }
+    state.images.music = URL.createObjectURL(file);
+    music.restart();
+    $('#music-pick').textContent = '🎵 Şarkı eklendi ✓';
+  });
+  $('#music-clear').addEventListener('click', async () => {
+    try { await runStoreRequest(IMAGE_STORE, 'readwrite', (s) => s.delete('music')); } catch (error) { /* önemli değil */ }
+    delete state.images.music;
+    music.restart();
+  });
 
   // Yazıdan çıkınca (odak kaybında) kaydet
   document.addEventListener('focusout', (event) => {

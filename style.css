@@ -620,3 +620,8 @@ nav a.active {                       /* aktif bölüm: pembe alt çizgi */
   background: var(--card);
   transform: translateX(-50%);
 }
+
+/* ---------- 12) MÜZİK AYARLARI ---------- */
+.local-only { display: flex; flex-direction: column; gap: 10px; }
+.local-only[hidden] { display: none; }
+#settings-panel input[type="range"] { width: 100%; accent-color: var(--pink); }

@@ -51,6 +51,18 @@ const LETTERS = [
 ];
 
 /*
+  MÜZİK
+  file:        Kendi şarkın. Dosyayı GitHub'daki "muzik" klasörüne yükle ve adını yaz,
+               örn. 'muzik/sarkimiz.mp3'. Dosya adında Türkçe karakter, boşluk ve
+               büyük harf kullanma. null bırakırsan hazır, yumuşak bir fon sesi çalar.
+  volume:      Ses seviyesi, 0 (sessiz) ile 1 (en yüksek) arası.
+  playOnEnter: true ise "Hikâyemize Gir" butonuna basınca şarkın kendiliğinden başlar
+               (sadece şarkı dosyası varsa).
+  Not: Telif hakkı olan şarkıyı herkese açık bir sitede yayınlamak sorun çıkarabilir.
+*/
+const MUSIC = { file: null, volume: 0.5, playOnEnter: true };
+
+/*
   SİTE YAZILARI VE RENKLER
   Bunları elle yazmana gerek yok: sitede ✎ Düzenle moduna girip
   yazıları değiştir, sonra panelden "ayarlar.js olarak indir" butonuna bas
@@ -73,10 +85,4 @@ const SITE_COLORS = { pink: null, wine: null };
     appId: '...',
   };
 */
-const FIREBASE_CONFIG = {
-
-  apiKey: "AIzaSyAJfXKmJV4Xnz9lsrS8YLlFzdLomEzTy20",
-  authDomain: "bizim-hikayemiz-a9202.firebaseapp.com",
-  projectId: "bizim-hikayemiz-a9202",
-  appId: "1:548892750476:web:6cc366d0ff6b5b73f981a9",
-}
+const FIREBASE_CONFIG = null;
